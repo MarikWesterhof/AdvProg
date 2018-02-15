@@ -16,87 +16,181 @@ import os
 # - # students per group                spg
 # - Name of input file                  inp
 # - Name of output file                 out
+
+# CSV -> CSV
 def groupify(ass, spg, inp, out):
     
-    # Read the given CSV file name and turn it into a student info list.
-    with open(inp, 'r') as f:
-        reader = csv.reader(f)
-        studentinfo = list(reader)
-    # Skim all info but people's first names
-    students = [s[0] for s in studentinfo]
+    # Obtain student list from CSV
+    students = read_file(inp)
     
-    # Raise exception if given group size is too big or small
+    # Check if group size isn't too high or low
+    check_groupsize(students, spg)
+    
+    # Cumulative groups list
+    g_cumu = []
+       
+    # Repeat the following for every assignment
+    for i in range(ass):
+        
+        # Make the (unformatted) group list
+        g_unform = make_lists(i, students, spg)
+        
+        # Format this list; make it CSV-ready       
+        g_form = format_lists(i, g_unform)
+        
+        g_cumu.append(g_form)
+              
+    # Write formatted list to specified CSV
+    write_file(ass, g_cumu, out)
+        
+        
+    # Return unformatted list (for unit testing)
+    return(g_unform)
+        
+        
+# CSV -> [List of Strings]    
+def read_file(inp):
+        
+    # Read the given CSV file name and turn it into a student info list.
+    with open(inp, 'r', encoding='utf-8') as f:
+        reader = csv.reader(f)
+        student_info = list(reader)
+        
+    # Skim all info but people's first names
+    students = ([s[0] for s in student_info])
+    
+    return(students)
+    
+
+# Number, [List of Lists], String -> CSV       
+def write_file(ass, g_cumu, out):
+    
+    # Write the now formatted list to the given CSV
+    with open(out, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f, quoting=csv.QUOTE_ALL)
+        for i in range(ass):
+            writer.writerows(g_cumu[i])   
+    
+        
+# Number, [List of Strings], Number -> [List of Lists]                
+def make_lists(i, students, spg):
+    
+    # Shuffle the group list for every assignment
+    random.shuffle(students)
+    
+    # Make lists depending on group size
+    g_unform = ([students[i:i + spg] for i in range(0, len(students), spg)])
+    
+    # Check for if the last group is >1 smaller than the others and fix it
+    g_unform = divide_leftovers(g_unform)
+        
+    return(g_unform)
+    
+    
+# Number, [List of Lists] -> [List of Lists]   
+def format_lists(i, g_unform):
+    
+    # Firstly, a line for "Assignment #"
+    g_form = []
+    g_form.append(['Assignment ' + str(i + 1)])
+                  
+    # Secondly, a loop that writes the groups out for each assignment
+    for i in range(len(g_unform)):
+        g_form.append(g_unform[i])
+        
+    # Thirdly, a blank line between assignments for tidiness
+    g_form.append('\n')
+    
+    return(g_form)
+  
+    
+# [List of Lists] -> [List of Lists]     
+def divide_leftovers(g_unform):
+    
+    # Group size difference can't be more than one. If so:
+    if len(g_unform[-1]) < (len(g_unform[0])-1):
+        
+        # Some groups can't be split. If so, this check catches it
+        check_groupdiff(g_unform)
+        
+        # Take the last, smaller list, and seperate it as the 'leftover list'
+        g_unform, leftover = g_unform[:-1], g_unform[-1]
+        
+        # divide this leftover list among the other groups
+        for i in range(len(leftover)):
+            g_unform[i].append(leftover[i])
+            
+    
+    return(g_unform)
+    
+   
+# [List of Strings], Number -> Exception OR None  
+def check_groupsize(students,spg):
+    
+    # Raise exception if given group size is too big...
     if spg > len(students):
         raise Exception('Group size given exceeds amount of students.')
+    
+    # ... or too small.
     elif spg < 1:
         raise Exception('Group size has to be at least one.')
+        
     
-    # This will be the list that the reader will turn into a CSV file.
-    # As such, we have to format it properly in the following loop.
-    groups = []
+# [List of Lists] -> Exception OR None       
+def check_groupdiff(g_unform):
+    
+    # Raise exception if group sizedifference is > 1
+    if len(g_unform[-1]) > len(g_unform[:-1]):
+        raise Exception('Group size difference would too big')
 
-    # This loop creates the groups. It repeats for every assignment time.
-    for i in range(ass):
-        # Shuffle the list of students for each iteration
-        random.shuffle(students)
-        # Make lists depending on group size
-        a = ([students[i:i + spg] for i in range(0, len(students), spg)])
         
-        # Group size difference can't be more than one. If so:
-        if len(a[-1]) < (len(a[0])-1):
-            # Raise exception if group sizedifference is > 1
-            if len(a[-1]) > len(a[:-1]):
-                raise Exception('Group size difference would too big')
-            # Take the 'leftover list' and divide it over the others
-            a, b = a[:-1], a[-1]
-            for i in range(len(b)):
-                a[i].append(b[i])
-                
-        # Formatting the lists so that they will be properly done in CSV
-        # Firstly, a line for "Assignment #"
-        groups.append(['Assignment ' + str(i + 1)])
-        # Secondly, a loop that writes the groups out for each assignment
-        for i in range(len(a)):
-            groups.append(a[i])
-        # Thirdly, a blank line between assignments for tidiness
-        groups.append('\n')
-    
-        # Write the now completed groups list to the given csv
-        with open(out, 'w', newline='') as f:
-            writer = csv.writer(f, quoting=csv.QUOTE_ALL)
-            writer.writerows(groups)
         
-    # Return the set. Not used for the CSV, but only for unittesting.
-    # 'a' is the unformatted list, while 'groups' is formatted for CSV.
-    return(a)
- 
-# Unittests. Writes to att.csv as to not overwrite the normal one
+# Unittests. Writes to att.csv as to not overwrite the normal CSV
 class TestPM(unittest.TestCase):
+    
     def setUp(self):
         pass
+    
+    ### Testing the main function
     # Splitting up the group of 23 into groups of 5 should return
     # four groups of length [6, 6, 6, 5]: this is tested as such.
-    def test_group_amount(self):
+    def test_groupify_groups(self):
         self.assertEqual(len(groupify(1,5,'students.csv','att.csv')),4)
-    def test_group1_length(self):
+        
+    def test_groupify_length0(self):
         self.assertEqual(len(groupify(1,5,'students.csv','att.csv')[0]),6)
-    def test_group2_length(self):
+        
+    def test_groupify_length1(self):
         self.assertEqual(len(groupify(1,5,'students.csv','att.csv')[1]),6)
-    def test_group3_length(self):
+        
+    def test_groupify_length2(self):
         self.assertEqual(len(groupify(1,5,'students.csv','att.csv')[2]),6)
-    def test_group4_length(self):
+        
+    def test_groupify_length3(self):
         self.assertEqual(len(groupify(1,5,'students.csv','att.csv')[3]),5)
-    # Test Exception for when the group size is too high or low.
-    def test_group_size_too_high(self):
-        self.assertRaises(Exception,groupify,2,24,'students.csv','att.csv')
-    def test_group_size_too_low(self):
-        self.assertRaises(Exception,groupify,2,0,'students.csv','att.csv')
-    # Test Exception for when the group size difference is > 1
-    def test_group_size_too_different(self):
-        self.assertRaises(Exception,groupify,3,9,'students.csv','att.csv')
-
+    
+    # Test format_lists function
+    def test_format_lists(self):
+        self.assertEqual(format_lists(3, ['Casper', 'Daniel']),
+                         [['Assignment 4'],'Casper','Daniel','\n'])
+        
+    # test exception check for group size
+    def test_check_groupsize_high(self):
+        self.assertRaises(Exception,check_groupsize, ['Casper','Daniel'], 3)
+        
+    def test_check_groupsize_low(self):
+        self.assertRaises(Exception,check_groupsize, ['Casper','Daniel'], 0)
+        
+    # test exception check for group size difference
+    def test_check_groupdiff(self):
+        self.assertRaises(Exception,check_groupdiff,[['a','b'],
+                                                     ['c','d']],
+                                                     ['e','f','g'])
+        
+        
 if __name__ == '__main__':
     unittest.main()
  
+    
 # Clean up the CSV file used for testing afterwards.
 os.remove('att.csv')
