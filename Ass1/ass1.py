@@ -3,6 +3,9 @@
 Created on Sun Feb 11 20:40:35 2018
 
 @author: Marik
+v1:   Sun Feb 11: Created
+v2:   Thu Feb 15: Split into functions, add unittests
+v2.1: Mon Feb 19: Fix Typos
 """
 
 # Import the necessary modules for CSV, shuffling, and unit testing.
@@ -17,7 +20,7 @@ import os
 # - Name of input file                  inp
 # - Name of output file                 out
 
-# CSV -> CSV
+# Number, Number, String of CSV, String -> CSV, [List of Lists]
 def groupify(ass, spg, inp, out):
     
     # Obtain student list from CSV
@@ -48,7 +51,7 @@ def groupify(ass, spg, inp, out):
     return(g_unform)
         
         
-# CSV -> [List of Strings]    
+# String -> [List of Strings]    
 def read_file(inp):
         
     # Read the given CSV file name and turn it into a student info list.
@@ -81,7 +84,7 @@ def make_lists(i, students, spg):
     # Make lists depending on group size
     g_unform = ([students[i:i + spg] for i in range(0, len(students), spg)])
     
-    # Check for if the last group is >1 smaller than the others and fix it
+    # Check if the last group is > 1 smaller than the others and fix it
     g_unform = divide_leftovers(g_unform)
         
     return(g_unform)
@@ -139,9 +142,9 @@ def check_groupsize(students,spg):
 # [List of Lists] -> Exception OR None       
 def check_groupdiff(g_unform):
     
-    # Raise exception if group sizedifference is > 1
+    # Raise exception if group size difference is > 1
     if len(g_unform[-1]) > len(g_unform[:-1]):
-        raise Exception('Group size difference would too big')
+        raise Exception('Group size difference would be too big')
 
         
         
